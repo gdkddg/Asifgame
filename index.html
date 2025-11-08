@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 Pink Flappy Adventure 🌸</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(45deg, #FFB6C1, #FF69B4, #FF1493, #FFC0CB);
+            background-size: 400% 400%;
+            animation: rainbowPink 12s ease infinite, backgroundMove 15s linear infinite;
+            font-family: 'Arial', sans-serif;
+        }
+
+        @keyframes rainbowPink {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes backgroundMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 100% 100%; }
+        }
+
+        #gameCanvas {
+            border: 4px solid #FF1493;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(255, 20, 147, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.2);
+            background: radial-gradient(circle, #FFE4E1, transparent);
+            display: none; /* گیم شروع ہونے سے پہلے چھپا ہوا */
+        }
+
+        #gameOverScreen {
+            position: absolute;
+            background: linear-gradient(45deg, #FF69B4, #FFB6C1);
+            color: #FF1493;
+            font-family: Arial, sans-serif;
+            font-size: 34px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 3px 3px 6px rgba(255,255,255,0.8);
+            width: 400px;
+            height: 600px;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            animation: fadeInBig 0.6s ease-in, sparkle 2s infinite;
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(255, 105, 180, 0.9);
+        }
+
+        #startScreen {
+            position: absolute;
+            width: 400px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #startImage {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.9);
+            animation: fadeInOut 2s ease-in-out infinite alternate, scalePulse 2s ease-in-out infinite;
+            object-fit: cover;
+        }
+
+        #playButton {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF1493;
+            background: linear-gradient(45deg, #FFB6C1, #FF69B4);
+            border: 3px solid #FF1493;
+            border-radius: 15px;
+            cursor: pointer;
+            text-shadow: 1px 1px 3px rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(255, 20, 147, 0.7);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        #playButton:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px rgba(255, 20, 147, 1);
+        }
+
+        @keyframes fadeInBig {
+            0% { opacity: 0; transform: scale(0.7) rotate(-5deg); }
+            100% { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+
+        @keyframes sparkle {
+            0%, 100% { box-shadow: 0 0 40px rgba(255, 105, 180, 0.9); }
+            50% { box-shadow: 0 0 60px rgba(255, 20, 147, 1); }
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes scalePulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .emoji { font-size: 40px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <!-- گیم کا کینوس جہاں گیم پلے ہوتا ہے -->
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <!-- اسٹارٹ اسکرین جو گیم شروع ہونے سے پہلے دکھتی ہے -->
+    <div id="startScreen">
+        <img id="startImage" src="pho.png" alt="Start Image">
+        <button id="playButton">Play Game ✨</button>
+    </div>
+    <!-- گیم اوور اسکرین جو گیم ختم ہونے پر دکھتی ہے -->
+    <div id="gameOverScreen">
+        <div class="emoji">WALEED KHAN</div>
+        <div>🎮 Game Over! 🎮</div>
+        <div>Score: <span id="finalScore" style="color: #FF1493; font-size: 42px; text-shadow: 0 0 10px #FFB6C1;">0</span> ⭐⭐⭐</div>
+        <div>Click to Play Again! ✨</div>
+        <div class="emoji">🌸</div>
+    </div>
+    <!-- بیک گراؤنڈ میوزک (bag.mp3) گیم کے دوران چلتا ہے -->
+    <audio id="backgroundMusic" src="bag.mp3" loop preload="auto"></audio>
+    <!-- گیم اوور ساؤنڈ (sound.mp3) جو ایک بار چلتا ہے -->
+    <audio id="gameOverSound" src="sound.mp3" preload="auto"></audio>
+
+    <script>
+        // کینوس اور اس کا 2D سیاق و سباق (context) شروع کریں
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startScreen = document.getElementById('startScreen');
+        const startImage = document.getElementById('startImage');
+        const playButton = document.getElementById('playButton');
+        const finalScoreElement = document.getElementById('finalScore');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const gameOverSound = document.getElementById('gameOverSound');
+
+        // ساؤنڈ سیٹنگز
+        backgroundMusic.volume = 0.2; // بیک گراؤنڈ میوزک کی آواز کم
+        gameOverSound.volume = 0.6;   // گیم اوور ساؤنڈ کی نارمل آواز
+        let musicStarted = false;     // چیک کرتا ہے کہ میوزک شروع ہوا یا نہیں
+        let gameOverSoundPlayed = false; // چیک کرتا ہے کہ گیم اوور ساؤنڈ ایک بار چلا
+        let gameStarted = false;      // چیک کرتا ہے کہ گیم شروع ہوئی یا نہیں
+
+        // تصاویر لوڈ کریں
+        const birdImg = new Image();
+        birdImg.src = 'hlhl.png';
+        const startImages = ['phoo.png', 'phooo.png']; // اسٹارٹ اسکرین کی تصاویر
+        let currentImageIndex = 0; // موجودہ تصویر کا انڈیکس
+
+        // گیم کے متغیرات
+        let birdX = 100;              // برڈ کی افقی پوزیشن
+        let birdY = canvas.height / 2; // برڈ کی عمودی پوزیشن
+        let birdVelocity = 0;         // برڈ کی عمودی رفتار
+        const gravity = 0.15;         // گریویٹی (آسان گیم کے لیے کم)
+        const jump = -3;              // جمپ کی طاقت (اوپر جانے کی رفتار)
+        let pipes = [];               // پائپس کی فہرست
+        let score = 0;                // کھلاڑی کا اسکور
+        let gameOver = false;         // گیم اوور ہونے کا چیک
+        let rotation = 0;             // برڈ کی گھومنے کی زاویہ
+        let stars = [];               // بیک گراؤنڈ میں چمکتے ستاروں کی فہرست
+        let frameCount = 0;           // فریم کاؤنٹر (اینیمیشن کے لیے)
+
+        // گیم کی آسان سیٹنگز
+        const pipeWidth = 50;         // پائپ کی چوڑائی
+        const pipeGap = 250;          // پائپس کے درمیان فاصلہ (آسان گیم کے لیے بڑا)
+        let pipeSpeed = 1.2;          // پائپس کی رفتار (آہستہ)
+        let pipeFrequency = 150;      // نئے پائپ بننے کا وقفہ
+        const bird = { width: 65, height: 65, radius: 32 }; // برڈ کا سائز اور رداس
+
+        // بیک گراؤنڈ میں چمکتے ستاروں کو شروع کریں
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 20; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width, // رینڈم افقی پوزیشن
+                    y: Math.random() * canvas.height, // رینڈم عمودی پوزیشن
+                    size: Math.random() * 3 + 1,     // رینڈم سائز
+                    speed: Math.random() * 0.5 + 0.2 // رینڈم رفتار
+                });
+            }
+        }
+
+        // اسٹارٹ اسکرین کی تصاویر کو ہر 2 سیکنڈ بعد تبدیل کریں
+        function changeStartImage() {
+            currentImageIndex = (currentImageIndex + 1) % startImages.length; // اگلی تصویر
+            startImage.src = startImages[currentImageIndex]; // تصویر تبدیل کریں
+        }
+
+        // ہر 2 سیکنڈ بعد تصویر تبدیل کریں
+        setInterval(changeStartImage, 2000);
+
+        // بیک گراؤنڈ میوزک شروع کریں
+        function startBackgroundMusic() {
+            if (!musicStarted) {
+                backgroundMusic.play().then(() => {
+                    musicStarted = true;
+                    console.log('🎵 Background music started!');
+                }).catch(e => {
+                    console.log('Music will start on first jump');
+                });
+            }
+        }
+
+        // بیک گراؤنڈ میوزک روکیں
+        function pauseBackgroundMusic() {
+            backgroundMusic.pause();
+        }
+
+        // بیک گراؤنڈ میوزک دوبارہ شروع کریں
+        function resumeBackgroundMusic() {
+            if (musicStarted) {
+                backgroundMusic.play().catch(() => {});
+            }
+        }
+
+        // "Play Game" بٹن پر کلک ہینڈلر
+        playButton.addEventListener('click', () => {
+            startScreen.style.display = 'none'; // اسٹارٹ اسکرین چھپائیں
+            canvas.style.display = 'block';    // کینوس دکھائیں
+            gameStarted = true;                // گیم شروع
+            startBackgroundMusic();            // میوزک شروع
+            gameLoop();                        // گیم لوپ شروع
+        });
+
+        // کلک ایونٹ: جمپ یا ریسٹارٹ
+        document.addEventListener('click', () => {
+            if (gameStarted && !gameOver) {
+                birdVelocity = jump; // برڈ کو اوپر اٹھائیں
+            } else if (gameOver) {
+                restartGame(); // گیم دوبارہ شروع کریں
+            }
+        });
+
+        // گیم کو ریسٹارٹ کریں
+        function restartGame() {
+            birdY = canvas.height / 2; // برڈ کی پوزیشن دوبارہ بیچ میں
+            birdVelocity = 0;          // رفتار صفر
+            rotation = 0;              // گھومنا صفر
+            pipes = [];                // پائپس خالی
+            score = 0;                 // اسکور صفر
+            gameOver = false;          // گیم اوور ختم
+            gameOverSoundPlayed = false; // گیم اوور ساؤنڈ دوبارہ چلنے کے لیے تیار
+            pipeSpeed = 1.2;           // پائپ کی رفتار دوبارہ شروع
+            gameOverScreen.style.display = 'none'; // گیم اوور اسکرین چھپائیں
+            resumeBackgroundMusic();   // بیک گراؤنڈ میوزک دوبارہ شروع
+            initStars();               // ستارے دوبارہ بنائیں
+            
+        gameOverSound.pause();     // گیم اوور ساؤنڈ بند کریں
+    gameOverSound.currentTime = 0; // ساؤنڈ کا ٹائم ری سیٹ کریں
+}
+
+        // نیا پائپ بنائیں
+        function createPipe() {
+            const minHeight = 60;
+            const maxHeight = canvas.height - pipeGap - minHeight;
+            const pipeHeight = Math.floor(Math.random() * (maxHeight - minHeight)) + minHeight;
+            pipes.push({
+                x: canvas.width,      // پائپ دائیں طرف سے شروع
+                topHeight: pipeHeight, // اوپر والے پائپ کی اونچائی
+                bottomY: pipeHeight + pipeGap, // نیچے والے پائپ کی شروعات
+                scored: false         // اسکور کیا یا نہیں
+            });
+        }
+
+        // تصادم (collision) چیک کریں
+        function checkCollision() {
+            // اگر برڈ زمین یا چھت سے ٹکرائے
+            if (birdY + bird.radius > canvas.height - 20 || birdY - bird.radius < 20) {
+                return true;
+            }
+            // اگر برڈ پائپ سے ٹکرائے
+            for (let pipe of pipes) {
+                if (birdX + bird.radius > pipe.x && birdX - bird.radius < pipe.x + pipeWidth) {
+                    if (birdY - bird.radius < pipe.topHeight || birdY + bird.radius > pipe.bottomY) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // پائپ ڈرا کریں
+        function drawPipe(x, topHeight, bottomY) {
+            const gradient = ctx.createLinearGradient(x, 0, x + pipeWidth, 0);
+            gradient.addColorStop(0, '#FF69B4');
+            gradient.addColorStop(0.5, '#FF1493');
+            gradient.addColorStop(1, '#FFB6C1');
+            ctx.fillStyle = gradient;
+
+            ctx.fillRect(x, 0, pipeWidth, topHeight); // اوپر والا پائپ
+            ctx.fillRect(x, bottomY, pipeWidth, canvas.height - bottomY); // نیچے والا پائپ
+
+            ctx.strokeStyle = '#FF1493';
+            ctx.lineWidth = 5;
+            ctx.shadowColor = '#FFB6C1';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.rect(x, 0, pipeWidth, topHeight);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.rect(x, bottomY, pipeWidth, canvas.height - bottomY);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#FF1493';
+            ctx.shadowColor = '#FFB6C1';
+            ctx.shadowBlur = 12;
+            ctx.fillRect(x - 8, topHeight - 25, pipeWidth + 16, 25); // اوپر کی کیپ
+            ctx.fillRect(x - 8, bottomY, pipeWidth + 16, 25); // نیچے کی کیپ
+            ctx.shadowBlur = 0;
+        }
+
+        // بیک گراؤنڈ میں چمکتے ستارے ڈرا کریں
+        function drawStars() {
+            ctx.fillStyle = '#FFD700';
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 8;
+            for (let star of stars) {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+                star.y += star.speed;
+                if (star.y > canvas.height) star.y = 0; // اگر ستارہ نیچے جائے تو دوبارہ اوپر
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        // گیم کا مین لوپ
+        function gameLoop() {
+            if (!gameStarted) return; // اگر گیم شروع نہیں ہوئی تو لوپ نہ چلے
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // کینوس صاف کریں
+
+            if (gameOver) {
+                drawStars(); // گیم اوور پر ستارے دکھائیں
+                finalScoreElement.textContent = score; // اسکور دکھائیں
+                gameOverScreen.style.display = 'flex'; // گیم اوور اسکرین دکھائیں
+                
+                // گیم اوور ساؤنڈ صرف ایک بار چلائیں
+                if (!gameOverSoundPlayed) {
+                    pauseBackgroundMusic();
+                    gameOverSound.play().then(() => {
+                        gameOverSoundPlayed = true;
+                    }).catch(e => {});
+                }
+                
+                frameCount++;
+                requestAnimationFrame(gameLoop); // انیمیشن جاری رکھیں
+                return;
+            }
+
+            // نارمل گیم پلے
+            drawStars(); // ستارے ڈرا کریں
+
+            birdVelocity += gravity; // برڈ پر گریویٹی لگائیں
+            birdY += birdVelocity;  // برڈ کی پوزیشن اپ ڈیٹ
+            rotation = Math.min(birdVelocity / 100, 0.4); // برڈ کا گھومنا سیٹ کریں
+
+            // برڈ ڈرا کریں
+            ctx.save();
+            ctx.translate(birdX, birdY);
+            ctx.rotate(rotation); // برڈ کو گھمائیں
+            ctx.shadowColor = '#FFB6C1';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(birdImg, -bird.width / 2, -bird.height / 2, bird.width, bird.height);
+            ctx.restore();
+            ctx.shadowBlur = 0;
+
+            // نئے پائپ بنائیں
+            if (frameCount % pipeFrequency === 0) {
+                createPipe();
+            }
+
+            // پائپس اپ ڈیٹ اور ڈرا کریں
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].x -= pipeSpeed; // پائپ کو بائیں ہٹائیں
+                drawPipe(pipes[i].x, pipes[i].topHeight, pipes[i].bottomY);
+
+                // اسکور بڑھائیں اگر برڈ پائپ پاس کرے
+                if (!pipes[i].scored && pipes[i].x + pipeWidth < birdX) {
+                    score++;
+                    pipes[i].scored = true;
+                    pipeSpeed += 0.03; // رفتار ہلکی بڑھائیں
+                }
+
+                // پائپ اسکرین سے باہر جائے تو ہٹائیں
+                if (pipes[i].x + pipeWidth < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+
+            // تصادم چیک کریں
+            if (checkCollision()) {
+                gameOver = true;
+            }
+
+            // اسکور دکھائیں
+            ctx.fillStyle = '#FF1493';
+            ctx.shadowColor = '#FFB6C1';
+            ctx.shadowBlur = 15;
+            ctx.font = 'bold 28px Arial';
+            ctx.fillText(`Score: ${score} 💖⭐`, 8, 35);
+            ctx.shadowBlur = 0;
+
+            frameCount++;
+            requestAnimationFrame(gameLoop); // اگلا فریم
+        }
+
+        // گیم شروع کریں جب برڈ کی تصویر لوڈ ہو
+        birdImg.onload = () => {
+            initStars();
+        };
+    </script>
+</body>
+</html>
